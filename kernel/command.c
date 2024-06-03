@@ -50,7 +50,7 @@ void cd(const char *path) {
 
 void pwd() {
     char cwd[BUFFER_SIZE];
-    if (syscall(SYS_GETCWD, cwd, sizeof(cwd)) != NULL) {
+    if (syscall(SYS_GETCWD, cwd, sizeof(cwd)) != -1) {
         printf("%s\n", cwd);
     } else {
         perror("pwd");
