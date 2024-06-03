@@ -1,3 +1,4 @@
+//command.c
 #include "command.h"
 #include "syscall.h"
 #include <stdio.h>
@@ -64,13 +65,14 @@ void make_dir(const char *path) {
         fprintf(stderr, "mkdir: missing operand\n");
         return;
     }
+    uid_t original_uid = geteuid();
     seteuid(0); // 관리자 권한으로 설정
 
     if (syscall(SYS_MKDIR, path, 0777) != 0) {
         perror("mkdir");
     }
     // 권한을 원래 사용자로 되돌리기
-    seteuid(getuid());
+    seteuid(original_uid);
 }
 
 void remove_dir(const char *path) {
@@ -153,7 +155,7 @@ void mv(const char *args) {
         fprintf(stderr, "mv: missing file operand\n");
         return;
     }
-    
+
     if (syscall(SYS_RENAME, src, dest) != 0) {
         perror("mv");
     }
