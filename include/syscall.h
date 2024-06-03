@@ -2,6 +2,7 @@
 #define SYSCALL_H
 
 #include <unistd.h>
+#include <stdarg.h>
 
 #define SYS_READ 0
 #define SYS_WRITE 1
@@ -360,27 +361,27 @@
 #define SYS_LANDLOCK_RESTRICT_SELF 445
 #define SYS_MEMFD_SECRET 446
 
-static inline long syscall(long number, ...) {
+static inline long my_syscall(long number, ...) {
     va_list args;
     va_start(args, number);
-    long ret;
-    __asm__ volatile (
-        "movq %1, %%rax;\n"
-        "movq %2, %%rdi;\n"
-        "movq %3, %%rsi;\n"
-        "movq %4, %%rdx;\n"
-        "movq %5, %%r10;\n"
-        "movq %6, %%r8;\n"
-        "movq %7, %%r9;\n"
-        "syscall"
-        : "=a" (ret)
-        : "r" (number), "r" (va_arg(args, long)), "r" (va_arg(args, long)), 
-          "r" (va_arg(args, long)), "r" (va_arg(args, long)), "r" (va_arg(args, long)), 
+    long result;
+    asm volatile (
+        "mov %1, %%rax\n"
+        "mov %2, %%rdi\n"
+        "mov %3, %%rsi\n"
+        "mov %4, %%rdx\n"
+        "mov %5, %%r10\n"
+        "mov %6, %%r8\n"
+        "mov %7, %%r9\n"
+        "syscall\n"
+        : "=a" (result)
+        : "r" (number), "r" (va_arg(args, long)), "r" (va_arg(args, long)),
+          "r" (va_arg(args, long)), "r" (va_arg(args, long)), "r" (va_arg(args, long)),
           "r" (va_arg(args, long))
         : "memory"
     );
     va_end(args);
-    return ret;
+    return result;
 }
 
 #endif // SYSCALL_H

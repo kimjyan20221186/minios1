@@ -57,7 +57,7 @@ void pwd() {
     }
 }
 
-void mkdir(const char *path) {
+void make_dir(const char *path) {
     if (path == NULL || strlen(path) == 0) {
         fprintf(stderr, "mkdir: missing operand\n");
         return;
@@ -67,7 +67,7 @@ void mkdir(const char *path) {
     }
 }
 
-void rmdir(const char *path) {
+void remove_dir(const char *path) {
     if (path == NULL || strlen(path) == 0) {
         fprintf(stderr, "rmdir: missing operand\n");
         return;
@@ -157,9 +157,9 @@ void execute_command(const char *command, const char *args) {
     } else if (strcmp(command, "pwd") == 0) {
         pwd();
     } else if (strcmp(command, "mkdir") == 0) {
-        mkdir(args);
+        make_dir(args);
     } else if (strcmp(command, "rmdir") == 0) {
-        rmdir(args);
+        remove_dir(args);
     } else if (strcmp(command, "touch") == 0) {
         touch(args);
     } else if (strcmp(command, "rm") == 0) {
