@@ -24,11 +24,15 @@ int main() {
         }
 
         // 입력된 명령어를 공백으로 분리
-        char *command = strtok(input, " ");
-        char *args = strtok(NULL, "");
+        if (strcmp(input, "minisystem") == 0) {
+            minisystem();
+        } else {
+            char *command = strtok(input, " ");
+            char *args = strtok(NULL, "");
 
-        if (command != NULL) {
-            execute_command(command, args);
+            if (command) {
+                execute_command(command, args);
+            }
         }
 
         free(input);
@@ -36,7 +40,7 @@ int main() {
 
     print_minios("[MiniOS SSU] MiniOS Shutdown........");
 
-    return 0;
+    return 1;
 }
 
 void print_minios(const char* str) {

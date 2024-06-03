@@ -5,6 +5,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
+#include <stdarg.h>
 
 #define BUFFER_SIZE 1024
 
@@ -62,9 +64,13 @@ void make_dir(const char *path) {
         fprintf(stderr, "mkdir: missing operand\n");
         return;
     }
+    seteuid(0); // 관리자 권한으로 설정
+
     if (syscall(SYS_MKDIR, path, 0777) != 0) {
         perror("mkdir");
     }
+    // 권한을 원래 사용자로 되돌리기
+    seteuid(getuid());
 }
 
 void remove_dir(const char *path) {
@@ -78,6 +84,11 @@ void remove_dir(const char *path) {
 }
 
 void touch(const char *path) {
+    if (path == NULL || strlen(path) == 0) {
+        fprintf(stderr, "touch: missing operand\n");
+        return;
+    }
+
     int fd = syscall(SYS_OPEN, path, O_CREAT | O_WRONLY, 0666);
     if (fd < 0) {
         perror("touch");
@@ -87,6 +98,11 @@ void touch(const char *path) {
 }
 
 void rm(const char *path) {
+    if (path == NULL || strlen(path) == 0) {
+        fprintf(stderr, "rm: missing operand\n");
+        return;
+    }
+
     if (syscall(SYS_UNLINK, path) != 0) {
         perror("rm");
     }
@@ -94,7 +110,12 @@ void rm(const char *path) {
 
 void cp(const char *args) {
     char src[256], dest[256];
-    sscanf(args, "%s %s", src, dest);
+
+    if (sscanf(args, "%255s %255s", src, dest) != 2) {
+        fprintf(stderr, "cp: missing file operand\n");
+        return;
+    }
+
     int src_fd = syscall(SYS_OPEN, src, O_RDONLY);
     if (src_fd < 0) {
         perror("cp: open source");
@@ -128,7 +149,11 @@ void cp(const char *args) {
 
 void mv(const char *args) {
     char src[256], dest[256];
-    sscanf(args, "%s %s", src, dest);
+    if (sscanf(args, "%255s %255s", src, dest) != 2) {
+        fprintf(stderr, "mv: missing file operand\n");
+        return;
+    }
+    
     if (syscall(SYS_RENAME, src, dest) != 0) {
         perror("mv");
     }
