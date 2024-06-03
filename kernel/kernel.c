@@ -3,36 +3,43 @@
 #include <string.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "command.h"
 
-#include "system.h"
-void print_minios(char* str);
+void print_minios(const char* str);
 
 int main() {
     print_minios("[MiniOS SSU] Hello, World!");
 
     char *input;
-
     while(1) {
-        // readline을 사용하여 입력 받기
         input = readline("커맨드를 입력하세요(종료:exit) : ");
 
-        if (strcmp(input,"exit") == 0) {
+        if (input == NULL) {
             break;
         }
 
-        if (strcmp(input,"minisystem") == 0){
-            minisystem();
+        if (strcmp(input, "exit") == 0) {
+            free(input);
+            break;
         }
-        else system(input);
+
+        // 입력된 명령어를 공백으로 분리
+        char *command = strtok(input, " ");
+        char *args = strtok(NULL, "");
+
+        if (command != NULL) {
+            execute_command(command, args);
+        }
+
+        free(input);
     }
 
-    // 메모리 해제
-    free(input);
     print_minios("[MiniOS SSU] MiniOS Shutdown........");
 
-    return(1);
+    return 0;
 }
 
-void print_minios(char* str) {
-        printf("%s\n",str);
+void print_minios(const char* str) {
+    printf("%s\n", str);
 }
+
