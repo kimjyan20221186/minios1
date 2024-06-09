@@ -4,83 +4,26 @@
 #include <string.h>
 #include <time.h> // 파일 시간 정보를 위해 추가
 
-#define MAX_INODES 1024 // 최대 inode 개수
-#define MAX_DATA_BLOCKS 4096 // 최대 데이터 블록 개수
-#define BLOCK_SIZE 4096
-
 typedef struct Inode {
     int fileSize; // 파일 크기
     time_t created; // 파일 생성 시간
     time_t modified; // 파일 수정 시간
     int linkCount; // 링크 수
-    int dataBlockNumbers[10]; // 데이터 블록 번호 배열 (최대 10개)
-    bool inUse; // inode 사용 여부 플래그
     // 여기에 더 많은 inode 관련 정보를 추가할 수 있습니다.
 } Inode;
 
-Inode inodeTable[MAX_INODES];
-char dataBlocks[MAX_DATA_BLOCKS][BLOCK_SIZE];
-bool dataBlockUsed[MAX_DATA_BLOCKS];
-
 typedef struct File {
     char name[100]; // 파일 이름
-    int inodeNumber; // 파일의 inode 번호
-    //char content[256]; // 파일 내용
-    //Inode inode; // 파일의 inode 정보
+    char content[256]; // 파일 내용
+    Inode inode; // 파일의 inode 정보
 } File;
 
 typedef struct Directory {
     char name[100]; // 디렉터리 이름
+    void* children[10]; // 자식 노드 포인터 배열 (디렉터리 또는 파일), 간단한 예제를 위해 최대 10개로 제한
+    int childCount; // 현재 자식 노드의 수
     Inode inode; // 디렉터리의 inode 정보
-    File files[100]; // 디렉터리 내의 파일 정보 배열
-    int fileCount; // 현재 파일 개수
 } Directory;
-
-int allocateInode() {
-    for (int i = 0; i < MAX_INODES; i++) {
-        if (!inodeTable[i].inUse) {
-            inodeTable[i].inUse = true;
-            return i;
-        }
-    }
-    return -1; // 사용 가능한 inode가 없는 경우
-}
-
-void freeInode(int inodeNumber) {
-    inodeTable[inodeNumber].inUse = false;
-}
-
-int allocateDataBlock() {
-    for (int i = 0; i < MAX_DATA_BLOCKS; i++) {
-        if (!dataBlockUsed[i]) {
-            dataBlockUsed[i] = true;
-            return i;
-        }
-    }
-    return -1;
-}
-
-void freeDataBlock(int blockNumber) {
-    dataBlockUsed[blockNumber] = false;
-}
-
-void addFileToDirectory(Directory* dir, const char* fileName, int inodeNumber) {
-    dir->files[dir->fileCount].inodeNumber = inodeNumber;
-    strcpy(dir->files[dir->fileCount].name, fileName);
-    dir->fileCount++;
-}
-
-void removeFileFromDirectory(Directory* dir, const char* fileName) {
-    for (int i = 0; i < dir->fileCount; i++) {
-        if (strcmp(dir->files[i].name, fileName) == 0) {
-            for (int j = i; j < dir->fileCount - 1; j++) {
-                dir->files[j] = dir->files[j + 1];
-            }
-            dir->fileCount--;
-            break;
-        }
-    }
-}
 
 typedef enum { DIRECTORY, FILE_TYPE } NodeType;
 
@@ -184,55 +127,55 @@ void updateFileContent(Node* fileNode, const char* newContent) {
     fileNode->file.inode.modified = time(NULL);
 }
 
-void readFile(int inodeNumber, char* buffer, int size) {
-    Inode* inode = &inodeTable[inodeNumber];
-    int bytesRead = 0;
-    for (int i = 0; i < 10 && bytesRead < size; i++) {
-        if (inode->dataBlockNumbers[i] != -1) {
-            int bytesToCopy = BLOCK_SIZE;
-            if (bytesRead + bytesToCopy > size) {
-                bytesToCopy = size - bytesRead;
+void readfile(Node* node, const char* name) {
+    bool found = false;
+    if (node->type == FILE_TYPE) {
+        if (strcmp(node->file.name, name) == 0) {
+            printf("파일의 부모 디렉토리: %s ", node->parent->dir.name);
+            printf("파일 내용: %s\n", node->file.content);
+            printf("파일 크기: %d bytes \n", node->file.inode.fileSize);
+
+            // 생성 시간 출력
+            char* createdTime = ctime(&node->file.inode.created);
+            createdTime[strlen(createdTime) - 1] = '\0'; // 줄바꿈 제거
+            printf("생성 시간: %s\n", createdTime);
+            
+            // 수정 시간 출력
+            char* modifiedTime = ctime(&node->file.inode.modified);
+            modifiedTime[strlen(modifiedTime) - 1] = '\0'; // 줄바꿈 제거
+            printf("수정 시간: %s\n", modifiedTime);
+
+            found = true;
+        }
+    } else if (node->type == DIRECTORY) {
+        for (int i = 0; i < node->dir.childCount; i++) {
+            Node* child = (Node*)node->dir.children[i];
+            if (child->type == FILE_TYPE && strcmp(child->file.name, name) == 0) {
+                printf("파일의 부모 디렉토리: %s ", node->dir.name);
+                printf("파일 내용: %s\n", child->file.content);
+                printf("파일 크기: %d bytes \n", child->file.inode.fileSize);
+
+                // 생성 시간 출력
+                char* createdTime = ctime(&child->file.inode.created);
+                createdTime[strlen(createdTime) - 1] = '\0'; // 줄바꿈 제거
+                printf("생성 시간: %s\n", createdTime);
+            
+                // 수정 시간 출력
+                char* modifiedTime = ctime(&child->file.inode.modified);
+                modifiedTime[strlen(modifiedTime) - 1] = '\0'; // 줄바꿈 제거
+                printf("수정 시간: %s\n", modifiedTime);
+
+                found = true;
+            } else if (child->type == DIRECTORY) {
+                readfile(child, name); // 재귀적으로 탐색
             }
-            memcpy(buffer + bytesRead, dataBlocks[inode->dataBlockNumbers[i]], bytesToCopy);
-            bytesRead += bytesToCopy;
         }
     }
-
-    buffer[bytesRead] = '\0'; // 문자열 종료 문자 추가
-
-    // 파일 내용 및 메타데이터 출력
-    printf("파일 내용: %s\n", buffer);
-    printf("파일 크기: %d bytes\n", inode->fileSize);
-
-    // 생성 시간 출력
-    char* createdTime = ctime(&inode->created);
-    createdTime[strlen(createdTime) - 1] = '\0'; // 줄바꿈 제거
-    printf("생성 시간: %s\n", createdTime);
-
-    // 수정 시간 출력
-    char* modifiedTime = ctime(&inode->modified);
-    modifiedTime[strlen(modifiedTime) - 1] = '\0'; // 줄바꿈 제거
-    printf("수정 시간: %s\n", modifiedTime);
-}
-
-void writeFile(int inodeNumber, const char* buffer, int size) {
-    Inode* inode = &inodeTable[inodeNumber];
-    int bytesWritten = 0;
-    for (int i = 0; i < 10 && bytesWritten < size; i++) {
-        if (inode->dataBlockNumbers[i] == -1) {
-            int newBlockNumber = allocateDataBlock();
-            inode->dataBlockNumbers[i] = newBlockNumber;
-        }
-        int bytesToCopy = BLOCK_SIZE;
-        if (bytesWritten + bytesToCopy > size) {
-            bytesToCopy = size - bytesWritten;
-        }
-        memcpy(dataBlocks[inode->dataBlockNumbers[i]], buffer + bytesWritten, bytesToCopy);
-        bytesWritten += bytesToCopy;
+    if (!found && node->parent == NULL) { // 최상위 노드에서 파일을 찾지 못했으면
+        printf("'%s' 파일을 찾을 수 없습니다.\n", name);
     }
-    inode->fileSize = size;
-    inode->modified = time(NULL);
 }
+
 
 void updatefile(Node* parent, const char* name, const char* newContent) {
     if (parent->type != DIRECTORY) {
