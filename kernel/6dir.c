@@ -372,7 +372,7 @@ void printDirectorySize(Node* node) {
 }
 
 
-int main() {
+void dir_main() {
     Node* root = createNode("root", DIRECTORY, NULL);
     char command[100], name[100], parentName[100], content[256];
 
@@ -541,5 +541,4 @@ int main() {
     printTree(root, 0);
     freeTree(root);
 
-    return 0;
 }

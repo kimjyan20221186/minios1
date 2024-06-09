@@ -40,7 +40,7 @@ int main() {
 }
 
 void handle_dir_command() {
-    main(); 
+    dir_main(); 
 }
 void print_minios(const char* str) {
     printf("%s\n", str);
