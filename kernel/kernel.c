@@ -27,7 +27,7 @@ int main() {
         // 입력된 명령어를 공백으로 분리
         if (strcmp(input, "minisystem") == 0) {
             minisystem();
-        } else if (strcmp(command, "dir") == 0) {
+        } else if (strcmp(input, "dir") == 0) {
             handle_dir_command();
         } else system(input);
 
