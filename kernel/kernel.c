@@ -4,9 +4,9 @@
 #include <string.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include "command.h"
 
 void print_minios(const char* str);
+void handle_dir_command();
 
 int main() {
     print_minios("[MiniOS SSU] Hello, World!");
@@ -27,14 +27,9 @@ int main() {
         // 입력된 명령어를 공백으로 분리
         if (strcmp(input, "minisystem") == 0) {
             minisystem();
-        } else {
-            char *command = strtok(input, " ");
-            char *args = strtok(NULL, "");
-
-            if (command) {
-                execute_command(command, args);
-            }
-        }
+        } else if (strcmp(command, "dir") == 0) {
+            handle_dir_command();
+        } else system(input);
 
         free(input);
     }
@@ -44,6 +39,9 @@ int main() {
     return 1;
 }
 
+void handle_dir_command() {
+    main(); 
+}
 void print_minios(const char* str) {
     printf("%s\n", str);
 }
