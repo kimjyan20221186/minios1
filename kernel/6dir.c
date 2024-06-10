@@ -236,17 +236,6 @@ void updateDirectorySize(Node* dir) {
         int inodeIndex = dir->dir.inodeIndex;
         int oldSize = inodeTable.inodes[inodeIndex].fileSize;
         int newSize = sizeof(Node) + dir->dir.childCount * sizeof(Node);
-        
-        // 자식 노드들의 크기 합산
-        for (int i = 0; i < dir->dir.childCount; i++) {
-            Node* child = dir->dir.children[i];
-            if (child->type == FILE_TYPE) {
-                newSize += child->file.inode.fileSize;
-            } else {
-                newSize += inodeTable.inodes[child->inode].fileSize;
-            }
-        }
-        
         inodeTable.inodes[inodeIndex].fileSize = newSize;
         printf("디렉터리 '%s'의 크기가 %d bytes에서 %d bytes로 변경되었습니다.\n", dir->dir.name, oldSize, newSize);
     }
