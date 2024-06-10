@@ -425,8 +425,14 @@ void copyNode(Node* parent, const char* name, const char* newName, NodeType targ
 
 void calculateDirectorySize(Node* node, int* totalSize) {
     if (node->type == FILE_TYPE) {
+        // Add the file size from its inode
         *totalSize += node->file.inode.fileSize;
     } else if (node->type == DIR_TYPE) {
+        // Add the directory size stored in the inode
+        int inodeIndex = node->dir.inodeIndex;
+        *totalSize += inodeTable.inodes[inodeIndex].fileSize;
+        
+        // Recur for each child and add their sizes
         for (int i = 0; i < node->dir.childCount; i++) {
             calculateDirectorySize((Node*)node->dir.children[i], totalSize);
         }
