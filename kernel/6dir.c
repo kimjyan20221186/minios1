@@ -34,6 +34,7 @@ extern Superblock superblock;
 typedef struct File {
     char name[100]; // 파일 이름
     char content[256]; // 파일 내용
+    int inodeIndex;
     Inode inode; // 파일의 inode 정보
 } File;
 
@@ -41,6 +42,7 @@ typedef struct Directory {
     char name[100]; // 디렉터리 이름
     void* children[10]; // 자식 노드 포인터 배열 (디렉터리 또는 파일), 최대 10개로 제한
     int childCount; // 현재 자식 노드의 수
+    int inodeIndex;
     Inode inode; // 디렉터리의 inode 정보
 } Directory;
 
@@ -48,12 +50,24 @@ typedef enum { DIRECTORY, FILE_TYPE } NodeType;
 
 typedef struct Node {
     NodeType type; // 노드 타입 (디렉터리 또는 파일)
+    int inode; // 새로운 멤버 추가
     union {
         Directory dir;
         File file;
     };
     struct Node* parent; // 부모 노드 포인터
 } Node;
+
+int allocateInode() {
+    for (int i = 0; i < MAX_INODES; i++) {
+        if (!inodeTable.isAllocated[i]) {
+            inodeTable.isAllocated[i] = true;
+            superblock.usedInodes++;
+            return i;
+        }
+    }
+    return -1; // No available inode
+}
 
 Node* createNode(const char* name, NodeType type, Node* parent) {
     Node* newNode = (Node*)malloc(sizeof(Node));
@@ -66,7 +80,7 @@ Node* createNode(const char* name, NodeType type, Node* parent) {
         free(newNode);
         return NULL;
     }
-
+    
     if (type == DIRECTORY) {
         strcpy(newNode->dir.name, name);
         newNode->dir.childCount = 0;
@@ -86,17 +100,6 @@ Node* createNode(const char* name, NodeType type, Node* parent) {
     }
 
     return newNode;
-}
-
-int allocateInode() {
-    for (int i = 0; i < MAX_INODES; i++) {
-        if (!inodeTable.isAllocated[i]) {
-            inodeTable.isAllocated[i] = true;
-            superblock.usedInodes++;
-            return i;
-        }
-    }
-    return -1; // No available inode
 }
 
 void freeInode(int index) {
@@ -451,11 +454,19 @@ void printDirectorySize(Node* node) {
 
 
 void dir_main() {
-    // Initialize the file system structures
-    initializeSuperblock(&superblock);
-    initializeInodeTable(&inodeTable);
-
     Node* root = createNode("root", DIRECTORY, NULL);
+
+    superblock.totalInodes = MAX_INODES;
+    superblock.usedInodes = 0;
+    superblock.totalBlocks = 1000; // 임의의 값
+    superblock.usedBlocks = 0;
+    superblock.fileSystemSize = 1000000; // 임의의 값 (1MB)
+
+    // InodeTable 초기화
+    for (int i = 0; i < MAX_INODES; i++) {
+        inodeTable.isAllocated[i] = false;
+    }
+
     char command[100], name[100], parentName[100], content[256];
 
     while (1) {
