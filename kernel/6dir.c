@@ -56,7 +56,6 @@ typedef struct Node {
 } Node;
 
 void dir_main();
-void updateDirectorySize(Node* dir);
 int allocateInode();
 void freeInode(int inodeIndex);
 
@@ -117,7 +116,6 @@ void freeInode(int index) {
 void addChild(Node* parent, Node* child) {
     if (parent->dir.childCount < 10) {
         parent->dir.children[parent->dir.childCount++] = child;
-        updateDirectorySize(parent);
     } else {
         printf("자식 노드의 최대 개수를 초과했습니다.\n");
     }
@@ -230,28 +228,6 @@ void readfile(Node* node, const char* name) {
         printf("'%s' 파일을 찾을 수 없습니다.\n", name);
     }
 }
-
-void updateDirectorySize(Node* dir) {
-    if (dir->type == DIR_TYPE) {
-        int inodeIndex = dir->dir.inodeIndex;
-        int oldSize = inodeTable.inodes[inodeIndex].fileSize;
-        int newSize = strlen(dir->dir.name) + 1; // 디렉토리 이름의 길이 + 1(NULL 문자)
-
-        for (int i = 0; i < dir->dir.childCount; i++) {
-            Node* child = (Node*)dir->dir.children[i];
-            if (child->type == DIR_TYPE) {
-                newSize += strlen(child->dir.name) + 1; // 자식 디렉토리 이름의 길이 + 1(NULL 문자)
-            } else if (child->type == FILE_TYPE) {
-                newSize += strlen(child->file.name) + 1; // 자식 파일 이름의 길이 + 1(NULL 문자)
-                newSize += child->file.inode.fileSize; // 자식 파일 크기 추가
-            }
-        }
-
-        inodeTable.inodes[inodeIndex].fileSize = newSize;
-        printf("디렉토리 '%s'의 크기가 %d bytes에서 %d bytes로 변경되었습니다.\n", dir->dir.name, oldSize, newSize);
-    }
-}
-
 
 void updatefile(Node* parent, const char* name, const char* newContent) {
     if (parent->type != DIR_TYPE) {
