@@ -5,6 +5,9 @@
 #include <time.h> // 파일 시간 정보를 위해 추가
 
 #define MAX_INODES 100
+#define DIRECTORY 1
+#define FILE_TYPE 2
+#define MAX_CHILDREN 10
 
 typedef struct Inode {
     int fileSize; // 파일 크기
@@ -14,30 +17,6 @@ typedef struct Inode {
     // 여기에 더 많은 inode 관련 정보를 추가할 수 있습니다.
 } Inode;
 
-typedef struct InodeTable {
-    Inode inodes[MAX_INODES];
-    bool isAllocated[MAX_INODES];
-} InodeTable;
-
-extern InodeTable inodeTable;
-
-typedef struct Superblock {
-    int totalInodes;
-    int usedInodes;
-    int totalBlocks;
-    int usedBlocks;
-    int fileSystemSize;
-} Superblock;
-
-extern Superblock superblock;
-
-typedef struct File {
-    char name[100]; // 파일 이름
-    char content[256]; // 파일 내용
-    int inodeIndex;
-    Inode inode; // 파일의 inode 정보
-} File;
-
 typedef struct Directory {
     char name[100]; // 디렉터리 이름
     void* children[10]; // 자식 노드 포인터 배열 (디렉터리 또는 파일), 최대 10개로 제한
@@ -45,6 +24,13 @@ typedef struct Directory {
     int inodeIndex;
     Inode inode; // 디렉터리의 inode 정보
 } Directory;
+
+typedef struct File {
+    char name[100]; // 파일 이름
+    char content[256]; // 파일 내용
+    int inodeIndex;
+    Inode inode; // 파일의 inode 정보
+} File;
 
 typedef enum { DIRECTORY, FILE_TYPE } NodeType;
 
@@ -57,6 +43,28 @@ typedef struct Node {
     };
     struct Node* parent; // 부모 노드 포인터
 } Node;
+
+typedef struct InodeTable {
+    Inode inodes[MAX_INODES];
+    bool isAllocated[MAX_INODES];
+} InodeTable;
+
+InodeTable inodeTable;
+
+typedef struct Superblock {
+    int totalInodes;
+    int usedInodes;
+    int totalBlocks;
+    int usedBlocks;
+    int fileSystemSize;
+} Superblock;
+
+Superblock superblock;
+
+void dir_main();
+void updateDirectorySize(Node* dir);
+int allocateInode();
+void freeInode(int inodeIndex);
 
 int allocateInode() {
     for (int i = 0; i < MAX_INODES; i++) {
