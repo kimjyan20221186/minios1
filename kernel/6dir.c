@@ -235,18 +235,15 @@ void updateDirectorySize(Node* dir) {
     if (dir->type == DIR_TYPE) {
         int inodeIndex = dir->dir.inodeIndex;
         int oldSize = inodeTable.inodes[inodeIndex].fileSize;
-        int newSize = 0;
+        int newSize = strlen(dir->dir.name) + 1; // 디렉토리 이름의 길이 + 1(NULL 문자)
 
-        // 디렉토리 이름의 길이 + 1(NULL 문자)
-        newSize += strlen(dir->dir.name) + 1;
-
-        // 모든 자식 노드의 이름과 크기 합산
         for (int i = 0; i < dir->dir.childCount; i++) {
             Node* child = (Node*)dir->dir.children[i];
             if (child->type == DIR_TYPE) {
-                newSize += strlen(child->dir.name) + 1; // 디렉토리 이름
+                newSize += strlen(child->dir.name) + 1; // 디렉토리 이름의 길이 + 1(NULL 문자)
+                newSize += inodeTable.inodes[child->dir.inodeIndex].fileSize; // 하위 디렉토리의 크기
             } else if (child->type == FILE_TYPE) {
-                newSize += strlen(child->file.name) + 1; // 파일 이름
+                newSize += strlen(child->file.name) + 1; // 파일 이름의 길이 + 1(NULL 문자)
                 newSize += child->file.inode.fileSize; // 파일 크기
             }
         }
@@ -442,14 +439,11 @@ void copyNode(Node* parent, const char* name, const char* newName, NodeType targ
 
 void calculateDirectorySize(Node* node, int* totalSize) {
     if (node->type == FILE_TYPE) {
-        // Add the file size from its inode
         *totalSize += node->file.inode.fileSize;
     } else if (node->type == DIR_TYPE) {
-        // Add the directory size stored in the inode
         int inodeIndex = node->dir.inodeIndex;
         *totalSize += inodeTable.inodes[inodeIndex].fileSize;
-        
-        // Recur for each child and add their sizes
+
         for (int i = 0; i < node->dir.childCount; i++) {
             calculateDirectorySize((Node*)node->dir.children[i], totalSize);
         }
