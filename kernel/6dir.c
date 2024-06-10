@@ -30,7 +30,7 @@ Superblock superblock;
 
 typedef struct Directory {
     char name[100]; // 디렉터리 이름
-    void* children[10]; // 자식 노드 포인터 배열 (디렉터리 또는 파일), 최대 10개로 제한
+    void* children[30]; // 자식 노드 포인터 배열 (디렉터리 또는 파일), 최대 30개로 제한
     int childCount; // 현재 자식 노드의 수
     int inodeIndex;
     Inode inode; // 디렉터리의 inode 정보
@@ -38,7 +38,7 @@ typedef struct Directory {
 
 typedef struct File {
     char name[100]; // 파일 이름
-    char content[256]; // 파일 내용
+    char content[1024]; // 파일 내용
     int inodeIndex;
     Inode inode; // 파일의 inode 정보
 } File;
@@ -64,12 +64,12 @@ int allocateInode() {
         if (!inodeTable.isAllocated[i]) {
             inodeTable.isAllocated[i] = true;
             superblock.usedInodes++;
-            printf("Inode %d가 할당되었습니다.\n", i);
+            printf("Inode %d 가 할당되었습니다.\n", i);
             return i;
         }
     }
     printf("더 이상 할당 가능한 inode가 없습니다.\n");
-    return -1; // No available inode
+    return -1;
 }
 
 Node* createNode(const char* name, NodeType type, Node* parent) {
@@ -79,7 +79,7 @@ Node* createNode(const char* name, NodeType type, Node* parent) {
 
     int inodeIndex = allocateInode();
     if (inodeIndex == -1) {
-        printf("No available inodes.\n");
+        printf("더 이상 할당 가능한 inode가 없습니다.\n");
         free(newNode);
         return NULL;
     }
@@ -109,12 +109,12 @@ void freeInode(int index) {
     if (index >= 0 && index < MAX_INODES) {
         inodeTable.isAllocated[index] = false;
         superblock.usedInodes--;
-        printf("Inode %d가 해제되었습니다.\n", index);
+        printf("Inode %d 가 해제되었습니다.\n", index);
     }
 }
 
 void addChild(Node* parent, Node* child) {
-    if (parent->dir.childCount < 10) {
+    if (parent->dir.childCount < 30) {
         parent->dir.children[parent->dir.childCount++] = child;
     } else {
         printf("자식 노드의 최대 개수를 초과했습니다.\n");
@@ -170,7 +170,7 @@ void updateFileContent(Node* fileNode, const char* newContent) {
     }
     int newContentSize = strlen(newContent);
     if (newContentSize >= sizeof(fileNode->file.content)) {
-        printf("파일 내용이 너무 깁니다. 최대 길이는 %lu입니다.\n", sizeof(fileNode->file.content) - 1);
+        printf("파일 내용이 너무 깁니다. 최대 길이는 %lu 입니다.\n", sizeof(fileNode->file.content) - 1);
         return;
     }
     strcpy(fileNode->file.content, newContent);
@@ -450,7 +450,7 @@ void dir_main() {
     }
     inodeTable.isAllocated[root->dir.inodeIndex] = true; // 루트 디렉터리 inode 사용 표시
 
-    char command[100], name[100], parentName[100], content[256];
+    char command[100], name[100], parentName[100], content[1024];
 
     while (1) {
         printf("명령을 입력하세요 (makedir, makefile, readfile, updatefile, searchfile, print, delete, rename, copy, dirsize, quit): ");
@@ -489,7 +489,7 @@ void dir_main() {
             if (strcmp(command, "makedir") == 0) {
                 Node* newDir = createNode(name, DIR_TYPE, parentNode);
                 addChild(parentNode, newDir);
-                printf("디렉터리 '%s'가 생성되었습니다.\n", name);
+                printf("디렉터리 '%s' 가 생성되었습니다.\n", name);
             } else { // makefile
                 printf("파일 내용: ");
                 scanf(" %[^\n]s", content); // 공백을 포함한 내용을 받기 위해 수정
@@ -498,7 +498,7 @@ void dir_main() {
                 newFile->file.inode.fileSize = strlen(content); // 파일 크기 설정
                 addChild(parentNode, newFile);
                 updateFileContent(newFile, content);
-                printf("파일 '%s'가 생성되었습니다.\n", name);
+                printf("파일 '%s' 가 생성되었습니다.\n", name);
             }
         } else if (strcmp(command, "readfile") == 0) {
             printf("부모 디렉터리 이름: ");
