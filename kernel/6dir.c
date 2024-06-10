@@ -235,7 +235,7 @@ void updateDirectorySize(Node* dir) {
     if (dir->type == DIR_TYPE) {
         int inodeIndex = dir->dir.inodeIndex;
         int oldSize = inodeTable.inodes[inodeIndex].fileSize;
-        inodeTable.inodes[inodeIndex].fileSize = sizeof(Directory) + dir->dir.childCount * sizeof(Node*);
+        inodeTable.inodes[inodeIndex].fileSize = sizeof(Node) + dir->dir.childCount * sizeof(Node);
         printf("디렉터리 '%s'의 크기가 %d bytes에서 %d bytes로 변경되었습니다.\n", dir->dir.name, oldSize, inodeTable.inodes[inodeIndex].fileSize);
     }
 }
@@ -287,7 +287,7 @@ void searchfile(Node* node, const char* keyword) {
             // 수정 시간 출력
             char* modifiedTime = ctime(&node->file.inode.modified);
             modifiedTime[strlen(modifiedTime) - 1] = '\0'; // 줄바꿈 제거
-            printf("수정 시간: %s\n", modifiedTime);
+            printf("수정 시간: %s\n\n", modifiedTime);
         }
     } else if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
