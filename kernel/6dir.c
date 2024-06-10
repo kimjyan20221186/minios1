@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h> // 파일 시간 정보를 위해 추가
-
 #define MAX_INODES 100
 
 typedef struct Inode {
@@ -18,7 +17,6 @@ typedef struct InodeTable {
     Inode inodes[MAX_INODES];
     bool isAllocated[MAX_INODES];
 } InodeTable;
-
 InodeTable inodeTable;
 
 typedef struct Superblock {
@@ -28,7 +26,6 @@ typedef struct Superblock {
     int usedBlocks;
     int fileSystemSize;
 } Superblock;
-
 Superblock superblock;
 
 typedef struct Directory {
@@ -248,31 +245,32 @@ void updatefile(Node* parent, const char* name, const char* newContent) {
         printf("'%s'는 디렉터리가 아닙니다.\n", parent->dir.name);
         return;
     }
-    
     bool found = false;
     for (int i = 0; i < parent->dir.childCount; i++) {
         Node* child = (Node*)parent->dir.children[i];
         if (child->type == FILE_TYPE && strcmp(child->file.name, name) == 0) {
-            writeFile(child, newContent);
-            
+            // 파일 내용을 업데이트하고 수정 시간 갱신
+            strncpy(child->file.content, newContent, sizeof(child->file.content) - 1);
+            child->file.content[sizeof(child->file.content) - 1] = '\0'; // 안전하게 NULL 종료
+            child->file.inode.fileSize = strlen(newContent);
+            time(&child->file.inode.modified);
+
             printf("파일 '%s'의 내용이 업데이트 되었습니다.\n", name);
             printf("새로운 파일 내용: %s\n", child->file.content);
             printf("파일 크기: %d bytes\n", child->file.inode.fileSize);
-            
+
             char* modifiedTime = ctime(&child->file.inode.modified);
             modifiedTime[strlen(modifiedTime) - 1] = '\0'; // 줄바꿈 제거
             printf("수정 시간: %s\n", modifiedTime);
-            
+
             found = true;
             break;
         }
     }
-    
     if (!found) {
         printf("'%s' 파일을 찾을 수 없습니다.\n", name);
     }
 }
-
 
 void searchfile(Node* node, const char* keyword) {
     if (node->type == FILE_TYPE) {
