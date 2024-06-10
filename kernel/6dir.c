@@ -439,7 +439,7 @@ void dir_main() {
     Node* root = createNode("root", DIR_TYPE, NULL);
 
     superblock.totalInodes = MAX_INODES;
-    superblock.usedInodes = 0;
+    superblock.usedInodes = 1;
     superblock.totalBlocks = 1000; // 임의의 값
     superblock.usedBlocks = 0;
     superblock.fileSystemSize = 1000000; // 임의의 값 (1MB)
