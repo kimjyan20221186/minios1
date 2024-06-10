@@ -448,6 +448,7 @@ void dir_main() {
     for (int i = 0; i < MAX_INODES; i++) {
         inodeTable.isAllocated[i] = false;
     }
+    inodeTable.isAllocated[root->dir.inodeIndex] = true; // 루트 디렉터리 inode 사용 표시
 
     char command[100], name[100], parentName[100], content[256];
 
