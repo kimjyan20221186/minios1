@@ -239,8 +239,12 @@ void updateDirectorySize(Node* dir) {
 
         // 디렉터리 내부의 파일 및 디렉터리 이름 길이 합산
         for (int i = 0; i < dir->dir.childCount; i++) {
-            Node* child = (Node*)dir->dir.children[i];
-            newSize += strlen(child->name) + 1; // 파일/디렉터리 이름의 길이 + 1(NULL 문자)
+            void* child = dir->dir.children[i];
+            if (((Node*)child)->type == DIR_TYPE) {
+                newSize += strlen(((Directory*)child)->name) + 1; // 디렉토리 이름의 길이 + 1(NULL 문자)
+            } else if (((Node*)child)->type == FILE_TYPE) {
+                newSize += strlen(((File*)child)->name) + 1; // 파일 이름의 길이 + 1(NULL 문자)
+            }
         }
 
         // 디렉터리 내부의 파일 크기 합산
@@ -255,6 +259,7 @@ void updateDirectorySize(Node* dir) {
         printf("디렉토리 '%s'의 크기가 %d bytes에서 %d bytes로 변경되었습니다.\n", dir->dir.name, oldSize, newSize);
     }
 }
+
 
 
 
