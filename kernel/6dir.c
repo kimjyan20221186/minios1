@@ -508,6 +508,7 @@ void dir_main() {
                 scanf(" %[^\n]s", content); // 공백을 포함한 내용을 받기 위해 수정
                 Node* newFile = createNode(name, FILE_TYPE, parentNode);
                 strcpy(newFile->file.content, content);
+                newFile->file.fileSize = strlen(content); // 파일 크기 설정
                 addChild(parentNode, newFile);
                 updateFileContent(newFile, content);
                 printf("파일 '%s'가 생성되었습니다.\n", name);
