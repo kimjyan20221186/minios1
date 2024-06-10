@@ -5,9 +5,6 @@
 #include <time.h> // 파일 시간 정보를 위해 추가
 
 #define MAX_INODES 100
-#define DIRECTORY 1
-#define FILE_TYPE 2
-#define MAX_CHILDREN 10
 
 typedef struct Inode {
     int fileSize; // 파일 크기
@@ -32,7 +29,7 @@ typedef struct File {
     Inode inode; // 파일의 inode 정보
 } File;
 
-typedef enum { DIRECTORY, FILE_TYPE } NodeType;
+typedef enum { DIR_TYPE, FILE_TYPE } NodeType;
 
 typedef struct Node {
     NodeType type; // 노드 타입 (디렉터리 또는 파일)
@@ -89,7 +86,7 @@ Node* createNode(const char* name, NodeType type, Node* parent) {
         return NULL;
     }
     
-    if (type == DIRECTORY) {
+    if (type == DIR_TYPE) {
         strcpy(newNode->dir.name, name);
         newNode->dir.childCount = 0;
         newNode->dir.inodeIndex = inodeIndex;
@@ -131,12 +128,12 @@ void printTree(Node* node, int level) {
     for (int i = 0; i < level; i++) {
         printf("  ");
     }
-    if (node->type == DIRECTORY) {
+    if (node->type == DIR_TYPE) {
         printf("%s/\n", node->dir.name);
     } else {
         printf("%s\n", node->file.name);
     }
-    if (node->type == DIRECTORY) {
+    if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
             printTree((Node*)node->dir.children[i], level + 1);
         }
@@ -144,12 +141,12 @@ void printTree(Node* node, int level) {
 }
 
 void freeTree(Node* node) {
-    if (node->type == DIRECTORY) {
+    if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
             freeTree((Node*)node->dir.children[i]);
         }
     }
-    freeInode(node->type == DIRECTORY ? node->dir.inodeIndex : node->file.inodeIndex);
+    freeInode(node->type == DIR_TYPE ? node->dir.inodeIndex : node->file.inodeIndex);
     free(node);
 }
 
@@ -157,7 +154,7 @@ Node* findNode(Node* node, const char* name, NodeType type) {
     if (node->type == type && strcmp(node->dir.name, name) == 0) {
         return node;
     }
-    if (node->type == DIRECTORY) {
+    if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
             Node* found = findNode((Node*)node->dir.children[i], name, type);
             if (found != NULL) {
@@ -204,7 +201,7 @@ void readfile(Node* node, const char* name) {
             printf("파일의 부모 디렉토리: %s\n", node->parent ? node->parent->dir.name : "없음");
             found = true;
         }
-    } else if (node->type == DIRECTORY) {
+    } else if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
             Node* child = (Node*)node->dir.children[i];
             if (child->type == FILE_TYPE && strcmp(child->file.name, name) == 0) {
@@ -223,7 +220,7 @@ void readfile(Node* node, const char* name) {
                 printf("파일의 부모 디렉토리: %s\n", node->dir.name);
                 found = true;
                 break;
-            } else if (child->type == DIRECTORY) {
+            } else if (child->type == DIR_TYPE) {
                 readfile(child, name); // 재귀적으로 탐색
             }
         }
@@ -252,14 +249,14 @@ void readFile(Node* fileNode) {
 }
 
 void updateDirectorySize(Node* dir) {
-    if (dir->type == DIRECTORY) {
+    if (dir->type == DIR_TYPE) {
         int inodeIndex = dir->dir.inodeIndex;
         inodeTable.inodes[inodeIndex].fileSize = sizeof(Directory) + dir->dir.childCount * sizeof(Node*);
     }
 }
 
 void updatefile(Node* parent, const char* name, const char* newContent) {
-    if (parent->type != DIRECTORY) {
+    if (parent->type != DIR_TYPE) {
         printf("'%s'는 디렉터리가 아닙니다.\n", parent->dir.name);
         return;
     }
@@ -306,7 +303,7 @@ void searchfile(Node* node, const char* keyword) {
             modifiedTime[strlen(modifiedTime) - 1] = '\0'; // 줄바꿈 제거
             printf("수정 시간: %s\n", modifiedTime);
         }
-    } else if (node->type == DIRECTORY) {
+    } else if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
             searchfile((Node*)node->dir.children[i], keyword);
         }
@@ -314,12 +311,12 @@ void searchfile(Node* node, const char* keyword) {
 }
 
 int hasChildWithName(Node* parent, const char* name, int type) {
-    if (parent->type != DIRECTORY) {
+    if (parent->type != DIR_TYPE) {
         return 0; // 부모가 디렉터리가 아니면 항상 0을 반환
     }
     for (int i = 0; i < parent->dir.childCount; i++) {
         Node* child = (Node*)parent->dir.children[i];
-        if (type == DIRECTORY && child->type == DIRECTORY && strcmp(child->dir.name, name) == 0) {
+        if (type == DIR_TYPE && child->type == DIR_TYPE && strcmp(child->dir.name, name) == 0) {
             return 1; // 동일한 이름의 디렉터리 발견
         } else if (type == FILE_TYPE && child->type == FILE_TYPE && strcmp(child->file.name, name) == 0) {
             return 1; // 동일한 이름의 파일 발견
@@ -329,23 +326,23 @@ int hasChildWithName(Node* parent, const char* name, int type) {
 }
 
 void renameNode(Node* parent, const char* oldName, const char* newName, NodeType type) {
-    if (parent->type != DIRECTORY) {
+    if (parent->type != DIR_TYPE) {
         printf("'%s'는 디렉터리가 아닙니다.\n", parent->dir.name);
         return;
     }
     // 같은 이름을 가진 자식 노드가 있는지 확인
     if (hasChildWithName(parent, newName, type)) {
-        printf("'%s' 이름을 가진 %s가 이미 존재합니다.\n", newName, type == DIRECTORY ? "디렉터리" : "파일");
+        printf("'%s' 이름을 가진 %s가 이미 존재합니다.\n", newName, type == DIR_TYPE ? "디렉터리" : "파일");
         return;
     }
 
     bool found = false;
     for (int i = 0; i < parent->dir.childCount; i++) {
         Node* child = (Node*)parent->dir.children[i];
-        if (child->type == type && strcmp(type == DIRECTORY ? child->dir.name : child->file.name, oldName) == 0) {
+        if (child->type == type && strcmp(type == DIR_TYPE ? child->dir.name : child->file.name, oldName) == 0) {
             // 이름 변경
-            strcpy(type == DIRECTORY ? child->dir.name : child->file.name, newName);
-            if (type == DIRECTORY) {
+            strcpy(type == DIR_TYPE ? child->dir.name : child->file.name, newName);
+            if (type == DIR_TYPE) {
                 child->dir.inode.modified = time(NULL); // 노드 수정 시간 업데이트
             } else {
                 child->file.inode.modified = time(NULL); // 노드 수정 시간 업데이트
@@ -361,14 +358,14 @@ void renameNode(Node* parent, const char* oldName, const char* newName, NodeType
 }
 
 void deleteNode(Node* parent, const char* name, NodeType type) {
-    if (parent->type != DIRECTORY) {
+    if (parent->type != DIR_TYPE) {
         printf("'%s'는 디렉터리가 아닙니다.\n", parent->dir.name);
         return;
     }
 
     for (int i = 0; i < parent->dir.childCount; i++) {
         Node* child = (Node*)parent->dir.children[i];
-        if (child->type == type && strcmp(type == DIRECTORY ? child->dir.name : child->file.name, name) == 0) {
+        if (child->type == type && strcmp(type == DIR_TYPE ? child->dir.name : child->file.name, name) == 0) {
             // 자식 노드 삭제 처리
             freeTree(child);
             // 배열에서 삭제된 노드 제거
@@ -376,12 +373,12 @@ void deleteNode(Node* parent, const char* name, NodeType type) {
                 parent->dir.children[j] = parent->dir.children[j + 1];
             }
             parent->dir.childCount--;
-            printf("'%s' %s가 삭제되었습니다.\n", name, type == DIRECTORY ? "디렉터리" : "파일");
+            printf("'%s' %s가 삭제되었습니다.\n", name, type == DIR_TYPE ? "디렉터리" : "파일");
             return;
         }
     }
 
-    printf("'%s' %s를 찾을 수 없습니다.\n", name, type == DIRECTORY ? "디렉터리" : "파일");
+    printf("'%s' %s를 찾을 수 없습니다.\n", name, type == DIR_TYPE ? "디렉터리" : "파일");
 }
 
 void deepCopyNode(Node* original, Node* copy) {
@@ -391,11 +388,11 @@ void deepCopyNode(Node* original, Node* copy) {
         copy->file.inode.created = time(NULL); // 복사 시점을 생성 시간으로 설정
         copy->file.inode.modified = time(NULL); // 복사 시점을 수정 시간으로 설정
         copy->file.inode.linkCount = 1; // 새 파일이므로 링크 수는 1
-    } else if (original->type == DIRECTORY) {
+    } else if (original->type == DIR_TYPE) {
         for (int i = 0; i < original->dir.childCount; i++) {
             Node* child = (Node*)original->dir.children[i];
-            Node* newChild = createNode(child->type == DIRECTORY ? child->dir.name : child->file.name, child->type, copy);
-            if (child->type == DIRECTORY) {
+            Node* newChild = createNode(child->type == DIR_TYPE ? child->dir.name : child->file.name, child->type, copy);
+            if (child->type == DIR_TYPE) {
                 copy->dir.inode.fileSize = 0; // 자식 노드에 따라 달라질 수 있으므로, 0으로 초기화
                 copy->dir.inode.created = time(NULL); // 복사 시점을 생성 시간으로 설정
                 copy->dir.inode.modified = time(NULL); // 복사 시점을 수정 시간으로 설정
@@ -414,11 +411,11 @@ void deepCopyNode(Node* original, Node* copy) {
 }
 
 void copyNode(Node* parent, const char* name, const char* newName, NodeType targetType, Node* targetParent) {
-    if (parent->type != DIRECTORY) {
+    if (parent->type != DIR_TYPE) {
         printf("'%s'는 디렉터리가 아닙니다.\n", parent->dir.name);
         return;
     }
-    if (targetParent->type != DIRECTORY) {
+    if (targetParent->type != DIR_TYPE) {
         printf("'%s'는 디렉터리가 아닙니다.\n", targetParent->dir.name);
         return;
     }
@@ -429,7 +426,7 @@ void copyNode(Node* parent, const char* name, const char* newName, NodeType targ
     
     for (int i = 0; i < parent->dir.childCount; i++) {
         Node* child = (Node*)parent->dir.children[i];
-        if ((child->type == targetType) && ((targetType == DIRECTORY && strcmp(child->dir.name, name) == 0) || (targetType == FILE_TYPE && strcmp(child->file.name, name) == 0))) {
+        if ((child->type == targetType) && ((targetType == DIR_TYPE && strcmp(child->dir.name, name) == 0) || (targetType == FILE_TYPE && strcmp(child->file.name, name) == 0))) {
             Node* newCopy = createNode(newName, child->type, targetParent);
             deepCopyNode(child, newCopy);
             addChild(targetParent, newCopy);
@@ -443,7 +440,7 @@ void copyNode(Node* parent, const char* name, const char* newName, NodeType targ
 void calculateDirectorySize(Node* node, int* totalSize) {
     if (node->type == FILE_TYPE) {
         *totalSize += node->file.inode.fileSize;
-    } else if (node->type == DIRECTORY) {
+    } else if (node->type == DIR_TYPE) {
         for (int i = 0; i < node->dir.childCount; i++) {
             calculateDirectorySize((Node*)node->dir.children[i], totalSize);
         }
@@ -451,7 +448,7 @@ void calculateDirectorySize(Node* node, int* totalSize) {
 }
 
 void printDirectorySize(Node* node) {
-    if (node == NULL || node->type != DIRECTORY) {
+    if (node == NULL || node->type != DIR_TYPE) {
         printf("유효하지 않은 디렉터리 노드입니다.\n");
         return;
     }
@@ -462,7 +459,7 @@ void printDirectorySize(Node* node) {
 
 
 void dir_main() {
-    Node* root = createNode("root", DIRECTORY, NULL);
+    Node* root = createNode("root", DIR_TYPE, NULL);
 
     superblock.totalInodes = MAX_INODES;
     superblock.usedInodes = 0;
@@ -487,8 +484,8 @@ void dir_main() {
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
 
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
@@ -497,7 +494,7 @@ void dir_main() {
             scanf("%s", name);
 
             if (strcmp(command, "makedir") == 0) {
-                int foundDirectory = hasChildWithName(parentNode, name, DIRECTORY);
+                int foundDirectory = hasChildWithName(parentNode, name, DIR_TYPE);
                 if (foundDirectory) {
                     printf("같은 이름의 디렉터리가 이미 존재합니다: %s\n", name);
                     continue; // Skip the command if a node with the same name exists
@@ -510,7 +507,7 @@ void dir_main() {
                     continue;
                 }
 
-                Node* newDir = createNode(name, DIRECTORY, parentNode);
+                Node* newDir = createNode(name, DIR_TYPE, parentNode);
                 newDir->inode = inode; // Assign the allocated inode
                 addChild(parentNode, newDir);
                 printf("디렉터리 '%s'가 생성되었습니다.\n", name);
@@ -543,8 +540,8 @@ void dir_main() {
         } else if (strcmp(command, "readfile") == 0) {
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
@@ -555,8 +552,8 @@ void dir_main() {
         } else if (strcmp(command, "updatefile") == 0) {
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
@@ -581,8 +578,8 @@ void dir_main() {
             char typeName[10];
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
@@ -592,7 +589,7 @@ void dir_main() {
             scanf("%s", newName);
             printf("타입 ('file' 또는 'dir'): ");
             scanf("%s", typeName);
-            type = strcmp(typeName, "dir") == 0 ? DIRECTORY : FILE_TYPE;
+            type = strcmp(typeName, "dir") == 0 ? DIR_TYPE : FILE_TYPE;
             renameNode(parentNode, oldName, newName, type);
 
         } else if (strcmp(command, "delete") == 0) {
@@ -600,8 +597,8 @@ void dir_main() {
             char typeName[10];
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
@@ -609,7 +606,7 @@ void dir_main() {
             scanf("%s", name);
             printf("타입 ('file' 또는 'dir'): ");
             scanf("%s", typeName);
-            type = strcmp(typeName, "dir") == 0 ? DIRECTORY : FILE_TYPE;
+            type = strcmp(typeName, "dir") == 0 ? DIR_TYPE : FILE_TYPE;
             deleteNode(parentNode, name, type);
 
         } else if (strcmp(command, "copy") == 0) {
@@ -619,8 +616,8 @@ void dir_main() {
             char typeName[10];
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
@@ -632,15 +629,15 @@ void dir_main() {
             scanf("%s", nodeName);
             printf("복사할 파일/디렉터리의 새 이름: ");
             scanf("%s", newName);
-            type = strcmp(typeName, "dir") == 0 ? DIRECTORY : FILE_TYPE;
-            Node* newNode = findNode(root, nodeName, DIRECTORY);
+            type = strcmp(typeName, "dir") == 0 ? DIR_TYPE : FILE_TYPE;
+            Node* newNode = findNode(root, nodeName, DIR_TYPE);
             copyNode(parentNode, name, newName, type, newNode);
 
         } else if (strcmp(command, "dirsize") == 0) {
             printf("부모 디렉터리 이름: ");
             scanf("%s", parentName);
-            Node* parentNode = findNode(root, parentName, DIRECTORY);
-            if (parentNode == NULL || parentNode->type != DIRECTORY) {
+            Node* parentNode = findNode(root, parentName, DIR_TYPE);
+            if (parentNode == NULL || parentNode->type != DIR_TYPE) {
                 printf("'%s' 디렉터리를 찾을 수 없습니다.\n", parentName);
                 continue;
             }
