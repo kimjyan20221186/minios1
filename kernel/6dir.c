@@ -235,28 +235,27 @@ void updateDirectorySize(Node* dir) {
     if (dir->type == DIR_TYPE) {
         int inodeIndex = dir->dir.inodeIndex;
         int oldSize = inodeTable.inodes[inodeIndex].fileSize;
-        int newSize = 0;
+        int newSize = strlen(dir->dir.name) + 1; // 디렉토리 이름의 길이 + 1(NULL 문자)
 
-        // 디렉터리 내부의 파일 및 디렉터리 크기 합산
+        // 디렉터리 내부의 파일 및 디렉터리 이름 길이 합산
         for (int i = 0; i < dir->dir.childCount; i++) {
             Node* child = (Node*)dir->dir.children[i];
-            if (child->type == DIR_TYPE) {
-                newSize += strlen(child->dir.name) + 1;
-            } else {
-                newSize += strlen(child->file.name) + 1;
+            newSize += strlen(child->name) + 1; // 파일/디렉터리 이름의 길이 + 1(NULL 문자)
+        }
+
+        // 디렉터리 내부의 파일 크기 합산
+        for (int i = 0; i < dir->dir.childCount; i++) {
+            Node* child = (Node*)dir->dir.children[i];
+            if (child->type == FILE_TYPE) {
                 newSize += child->file.inode.fileSize;
             }
         }
 
-        // 빈 디렉터리의 경우 크기를 0으로 설정
-        if (newSize == 0) {
-            newSize = 0;
-        }
-
         inodeTable.inodes[inodeIndex].fileSize = newSize;
-        printf("디렉터리 '%s'의 크기가 %d bytes에서 %d bytes로 변경되었습니다.\n", dir->dir.name, oldSize, newSize);
+        printf("디렉토리 '%s'의 크기가 %d bytes에서 %d bytes로 변경되었습니다.\n", dir->dir.name, oldSize, newSize);
     }
 }
+
 
 
 
