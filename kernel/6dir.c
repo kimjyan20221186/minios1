@@ -83,27 +83,28 @@ Node* createNode(const char* name, NodeType type, Node* parent) {
         free(newNode);
         return NULL;
     }
+    time_t currentTime = time(NULL);
     
     if (type == DIR_TYPE) {
         strcpy(newNode->dir.name, name);
         newNode->dir.childCount = 0;
         newNode->dir.inodeIndex = inodeIndex;
-        time_t created;
-        time(&created);
         inodeTable.inodes[inodeIndex].fileSize = 0; 
-        inodeTable.inodes[inodeIndex].created = created;
-        inodeTable.inodes[inodeIndex].modified = created;
+        inodeTable.inodes[inodeIndex].created = currentTime;
+        inodeTable.inodes[inodeIndex].modified = currentTime;
         inodeTable.inodes[inodeIndex].linkCount = 0; 
+
+        newNode->dir.inode = inodeTable.inodes[inodeIndex];
     } else {
         strcpy(newNode->file.name, name);
         memset(newNode->file.content, 0, sizeof(newNode->file.content));
         newNode->file.inodeIndex = inodeIndex;
-        time_t created;
-        time(&created);
         inodeTable.inodes[inodeIndex].fileSize = strlen(newNode->file.content);
-        inodeTable.inodes[inodeIndex].created = created;
-        inodeTable.inodes[inodeIndex].modified = created;
+        inodeTable.inodes[inodeIndex].created = currentTime;
+        inodeTable.inodes[inodeIndex].modified = currentTime;
         inodeTable.inodes[inodeIndex].linkCount = 1; 
+
+        newNode->file.inode = inodeTable.inodes[inodeIndex];
     }
 
     return newNode;
@@ -192,8 +193,7 @@ void readfile(Node* node, const char* name) {
             printf("파일 내용: %s\n", node->file.content);
             printf("파일 크기: %d bytes\n", node->file.inode.fileSize);
             
-            time_t created = node->file.inode.created;
-            char* createdTime = ctime(&created);
+            char* createdTime = ctime(&node->file.inode.created);
             createdTime[strlen(createdTime) - 1] = '\0'; // 줄바꿈 제거
             printf("생성 시간: %s\n", createdTime);
             
